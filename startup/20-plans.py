@@ -3,7 +3,7 @@ import bluesky.plan_stubs as bps
 
 
 def scan_spectra_vs_mag_field(dets=[single_electron_spectrum],
-                              parameter=undulator.verticalAmplitude,
+                              parameter=undulator.verticalAmplitude if undulator is not None else None,
                               start=0.075, stop=1.5, num_spectra=21,
                               initial_energy=0.1, final_energy=1100.0,
                               num_points_per_spectrum=2000):
