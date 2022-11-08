@@ -117,3 +117,24 @@ energy[idx][harm_num] =   74.931 [eV]  intensity[idx][harm_num] = 2.06015e+13 [a
 lookup_harm1.to_csv("data/harmonic1.csv")
 lookup_harm3.to_csv("data/harmonic3.csv")
 ```
+
+### Get peaks for all spectra
+
+```python
+plot_all_peaks(df, method="peakutils", thres=0.07)
+plot_all_peaks(df, method="peakutils", thres=0.10)
+plot_all_peaks(df, method="peakutils", thres=0.20)
+
+plot_all_peaks(df, method="scipy", thres=0.07)
+plot_all_peaks(df, method="scipy", thres=0.10)
+plot_all_peaks(df, method="scipy", thres=0.20)
+```
+
+![peakutils-0.07.png](images/peakutils-0.07.png)
+![scipy-0.07.png](images/scipy-0.07.png)
+
+![peakutils-0.10.png](images/peakutils-0.10.png)
+![scipy-0.10.png](images/scipy-0.10.png)
+
+![peakutils-0.20.png](images/peakutils-0.20.png)
+![scipy-0.20.png](images/scipy-0.20.png)
