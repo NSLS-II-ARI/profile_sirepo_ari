@@ -121,20 +121,26 @@ lookup_harm3.to_csv("data/harmonic3.csv")
 ### Get peaks for all spectra
 
 ```python
-plot_all_peaks(df, method="peakutils", thres=0.07)
-plot_all_peaks(df, method="peakutils", thres=0.10)
-plot_all_peaks(df, method="peakutils", thres=0.20)
+plot_all_peaks(df, method="peakutils", thres=0.05, filter_thres=0.20)
+plot_all_peaks(df, method="peakutils", thres=0.07, filter_thres=0.20)
+plot_all_peaks(df, method="peakutils", thres=0.10, filter_thres=0.20)
 
-plot_all_peaks(df, method="scipy", thres=0.07)
-plot_all_peaks(df, method="scipy", thres=0.10)
-plot_all_peaks(df, method="scipy", thres=0.20)
+plot_all_peaks(df, method="scipy", thres=0.05, filter_thres=0.20)
+plot_all_peaks(df, method="scipy", thres=0.07, filter_thres=0.20)
+plot_all_peaks(df, method="scipy", thres=0.10, filter_thres=0.20)
 ```
+
+### Threshold 5%
+
+![peakutils-0.05.png](images/peakutils-0.05.png)
+![scipy-0.05.png](images/scipy-0.05.png)
+
+### Threshold 7%
 
 ![peakutils-0.07.png](images/peakutils-0.07.png)
 ![scipy-0.07.png](images/scipy-0.07.png)
 
+### Threshold 10%
+
 ![peakutils-0.10.png](images/peakutils-0.10.png)
 ![scipy-0.10.png](images/scipy-0.10.png)
-
-![peakutils-0.20.png](images/peakutils-0.20.png)
-![scipy-0.20.png](images/scipy-0.20.png)

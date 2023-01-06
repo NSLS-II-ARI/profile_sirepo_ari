@@ -62,7 +62,7 @@ def plot_all_peaks(df, method="scipy", thres=0.10, filter_thres=0.2,
     mag_fields = np.array(list(df["undulator_verticalAmplitude"]))
 
     fig, axes = plt.subplots(ncols=ncols, nrows=nrows, figsize=(ncols * 4, nrows * 3))
-    fig.suptitle(f"{method} / threshold={thres * 100:.0f}%")
+    fig.suptitle(f"{method} / threshold={thres * 100:.0f}% / filter threshold={filter_thres * 100:.0f}%")
 
     all_energies = {}
 
