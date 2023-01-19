@@ -1,4 +1,5 @@
 import os
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -150,7 +151,7 @@ def create_harmonics_json(df, path=HARMONICS_JSON):
         create_harmonics_json(df_harm, path="data/harmonics.json")
 
     """
-    json_str = df.to_json(indent=2)
+    json_str = json.dumps(json.loads(df.to_json()), indent=2)
     with open(path, "w") as f:
         f.write(json_str)
 
