@@ -10,7 +10,7 @@ def plot_images(data, nrows=2, ncols=4):
         uid, = RE(bp.scan([sample], epu.energy, 100, 800, nrows * ncols))
         hdr = db[uid]
         data = np.array(list(hdr.data("sample_image")))
-        plot_images(data, nrows=rows, ncols=ncols)
+        plot_images(data, nrows=nrows, ncols=ncols)
 
     """
     fig, ax = plt.subplots(nrows=nrows, ncols=ncols)
