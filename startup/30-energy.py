@@ -21,7 +21,7 @@ class SirepoSignalWithParent(SirepoSignal):
 class EnergySignal(SignalWithParent):
     def set(self, value):
         magn_field = self.parent._get_magn_field(value)
-        self.parent.magn_field_hor.put(magn_field)
+        self.parent.magn_field_ver.put(magn_field)
         self._readback = float(value)
         return NullStatus()
 
@@ -41,11 +41,18 @@ class EPU(classes["undulator"]):
     energy = Cpt(EnergySignal)
     harm_num = Cpt(Signal, value=1)
     polarization = Cpt(Signal, value="")
-    magn_field_hor = Cpt(MagnFieldSignal,
+    magn_field_ver = Cpt(MagnFieldSignal,
                          value=undulator.verticalAmplitude.get(),
                          sirepo_dict=undulator.verticalAmplitude._sirepo_dict,
                          sirepo_param="verticalAmplitude")
+    magn_field_hor = Cpt(Signal,  # TODO: update the base class when we deal with the hor. comp.
+                         value=undulator.horizontalAmplitude.get(),
+                         sirepo_dict=undulator.horizontalAmplitude._sirepo_dict,
+                         sirepo_param="horizontalAmplitude")
+    # We explicitly remove these components from the Sirepo class to avoid
+    # accidental change of them to avoid conflicts.
     verticalAmplitude = None
+    horizontalAmplitude = None
     def __init__(self, *args, harmonics_df=None, **kwargs):
         super().__init__(*args, **kwargs)
         if harmonics_df is None:
@@ -55,7 +62,7 @@ class EPU(classes["undulator"]):
         self.energy.put(self._get_energy())
 
     def _get_energy(self):
-        magn_field = self.magn_field_hor.get()
+        magn_field = self.magn_field_ver.get()
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html
         interp_func = interpolate.interp1d(self._harmonics_df["magn_field"],
                                            self._harmonics_df[f"harmonic{self.harm_num.get()}"],
