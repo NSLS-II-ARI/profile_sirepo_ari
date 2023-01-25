@@ -1,0 +1,342 @@
+from ophyd import Signal, SignalRO, Device, Component as Cpt
+from ophyd.sim import NullStatus
+from scipy import interpolate
+from sirepo_bluesky.sirepo_ophyd import SirepoSignal
+
+
+import numpy as np
+
+
+def _get_cff(e_ph, grating, r2, r1, m, gratings):
+    '''
+    Returns the fine focus constant given the energy, grating and output focal length.
+    
+    Based on the photon energy, grating, the output focal length and several other 
+    instantiation time parameters, seen as keywords, this function returns the fine 
+    focus constant using the relations:
+    $$c_{ff} = \sqrt((B_{0}+B_{1})/B{2})\\
+        \begin{align}
+        \text{where: } B_{0} &= 2A_{1}+4(A_{1}/A_{0})^2+(4+2A_{1}-A_{0}^{2})
+                              (\frac{r_{2}}{r_{1}})\\
+                     B_{1} &= -4(A_{1}/A_{0})\sqrt((1+\frac{r_{2}}{r_{1}})^2+
+                              2A_{1}(1+\frac{r_{2}}{r_{1}})-
+                              A_{0}^{2}(\frac{r_{2}}{r_{1}})\\
+                     B_{2} &= -4+A_{0}^{2}-4A_{2}+4(A_{2}/A_{0})^2\\
+                     A_{0} &= m\lambda a_{0}\\
+                     A_{1} &= -\frac{1}{2}m\lambda r_{2}a_{1}\\
+                     \lambda &= (12398.4197/E_{ph})1e-7\\
+        \end{align}
+    $$
+
+    Units for each parameter are: eV for energies, mm for lengths and mm^{-1}/ 
+    mm^{-2}/ mm^{-3}/ mm^{-4} for the respective grating equation parameters.
+
+    Parameters
+    ----------
+    e_ph : float
+        The photon energy in eV.
+    grating : string
+        The grating name.
+    r2 : float
+        The output focal length for the PGM in mm    
+    r1 : float, optional
+        The input focal length for the PGM in mm
+    m : integer, optional
+        The diffraction order.
+    gratings : dict, optional
+        A dictionary that matches grating names to a dictionary of grating parameters.
+        
+    Returns
+    -------
+    cff : float
+        The fine focus constant.
+    '''
+    
+    lambda_ = (12398.4197/e_ph)*1E-7 # wavelength in mm from e_ph in eV
+    A1 = -0.5*m*lambda_*r2*gratings[grating]['a1']
+    A0 = m*lambda_*gratings[grating]['a0']
+    B2 = (-4+A0**2-4*A1+4*(A1/A0)**2)
+    B1 = -4*(A1/A0)*np.sqrt((1+r2/r1)**2+2*A1*(1+r2/r1)-A0**2*(r2/r1))
+    B0 = 2*A1+4*(A1/A0)**2+(4+2*A1-A0**2)*(r2/r1)
+    cff = np.sqrt((B0+B1)/B2)
+    
+    return cff
+
+
+
+def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings,
+                x_inc, x_diff, b):
+    '''
+    Returns the M2/Grating angles given the photon energy, grating and output focal 
+    length.
+    
+    Based on the photon energy, grating, the output focal length and several other 
+    instantiation time parameters, seen as keywords, this function returns the 
+    required angles for the M2 mirror and the grating using the _cff function and 
+    the relations:
+    $$
+        \Theta_{M2} = \frac{1}{2}(X_{diff}+X_{inc}+b(180-\alpha+\beta))\\
+        \Theta_{GR} = b(90+\beta)+X_{diff}
+        \begin{align}
+        \text{where: }  \alpha &=sin^{-1}(-ma_{0}\lambda /(c_{eff}^{2}-1)+
+                        \sqrt(1+(c_{ff}ma_{0}\lambda /(c_{eff}^{2}-1))^2))\\
+                        \beta &= sin^{-1}(ma_{0}\lambda-sin(\alpha))\\
+                        \lambda &= (12398.4197/E_{ph})1e-7\\
+        \end{align}
+    $$
+    
+    Units for each parameter are: eV for energies, mm for lengths, degrees for angles
+    and mm^{-1}/ mm^{-2}/ mm^{-3}/ mm^{-4} for the respective grating equation 
+    parameters.
+    
+    Parameters
+    ----------
+    E_ph : float
+        The photon energy in eV.
+    grating : string
+        The grating name.
+    r2 : float
+        The output focal length for the PGM in mm    
+    r1 : float, optional
+        The input focal length for the PGM in mm
+    m : integer, optional
+        The diffraction order.
+    gratings : dict, optional
+        A dictionary that matches grating names to a dictionary of grating parameters.
+    x_inc : float, optional
+        The incident X-ray angle
+    x_diff : float, optional
+        The outgoing X-ray angle
+    b : int, optional
+        integer indicating the bounce direction: +1 (for upward bounce) or -1 
+        (for downward bounce)
+    
+    Returns
+    -------
+    (theta_m2, theta_gr) : (float, float)
+        The required angles for M2 and the grating in degrees.
+    '''
+    ##NOTE if I choose to read in cff from a read-only ophyd signal then I no longer
+    ## need r2 and r1 as args/kwargs (but I will need cff as an arg)
+    lambda_ = (12398.4197/e_ph)*1E-7 # wavelength in mm from e_ph in eV
+    #NOTE the next line may be better read from the read-only axis instead of calculating
+    cff = _cff(e_ph, grating, r2, r1=r1, m=m, gratings=gratings) 
+    alpha =np.degrees(np.arcsin(-m*gratings[grating]['a0']*lambda_/(cff**2-1)+
+                      np.sqrt(1+(cff*m*gratings[grating]['a0']*lambda_/(cff**2-1))**2)))
+    beta = np.degrees(np.arcsin(m*gratings[grating]['a0']*lambda_-
+                                np.sin(np.radians(alpha))))
+    theta_m2 = abs(0.5*(x_diff+x_inc+b*(180-alpha+beta)))
+    theta_gr = b*(90+beta)+x_diff
+    
+    return (theta_m2, theta_gr)
+
+
+# def _pgm_energy(theta_m2, theta_gr, grating, m=_m, gratings=_gratings,
+#                 x_inc=_x_inc, x_diff=_x_diff, b=_b):
+#     '''
+#     Returns the energy given the M2/grating angles, grating and output focal 
+#     length.
+    
+#     Based on the M2/grating angles, grating, the output focal length and several other 
+#     instantiation time parameters, seen as keywords, this function returns the 
+#     photon energy using the _cff function and the relations:
+    
+#         E_{ph}=(12398.4197/\lambda)1e-7\\
+#         \begin{align}
+#         \text{where: } \lambda &= (sin(\alpha)+sin(\beta))/(ma_{0})\\
+#                        \beta &= - 90 +b(\Theta_{Gr} - X_{diff})\\
+#                        \alpha &= 80 + \beta + b(X_{diff} + X_{inc} - 2\Theta_{M2})
+#         \end{align}
+    
+#     Parameters
+#     ----------
+#     theta_m2 : float
+#         The angle of the M2 mirror
+#     theta_gr : float
+#         The angle of the Grating
+#     grating : string
+#         The grating name.
+#     m : integer, optional
+#         The diffraction order.
+#     gratings : dict, optional
+#         A dictionary that matches grating names to a dictionary of grating parameters.
+#     x_inc : float, optional
+#         The incident X-ray angle
+#     x_diff : float, optional
+#         The outgoing X-ray angle
+#     b : int, optional
+#         integer indicating the bounce direction: +1 (for upward bounce) or -1 
+#         (for downward bounce)
+    
+#     Returns
+#     -------
+#     e_ph : float
+#         The photon energy of the PGM in eV.
+#     '''
+    
+#     beta = - 90 +b*(theta_gr - x_diff)
+#     alpha = 180 + beta + b*(x_diff + x_inc - 2*theta_m2)
+#     lambda_ = (np.sin(np.radians(alpha))+
+#                np.sin(np.radians(beta)))/(m*gratings[grating]['a0'])
+#     e_ph=(12398.4197/lambda_)*1e-7 #energy in eV
+    
+#     return e_ph
+
+# def _cff(e_ph, grating, r2, r1=_r1, m=_m, gratings=_gratings):
+
+
+#def _get_pgm_angles(e_ph, grating, r2, r1=_r1, m=_m, gratings=_gratings,
+#                x_inc=_x_inc, x_diff=_x_diff, b=_b):
+
+class CFFSignalRO(SignalRO):
+
+    def get(self):
+
+        energy = self.parent.energy.get()
+
+        grating = self.parent.grating.get()
+
+        _r2 = self.parent._r2.get()
+
+        _r1 = self.parent._r1.get()
+
+        _m = self.parent._m.get()
+
+        _gratings = self.parent._gratings.get()
+
+        _cff = _get_cff(energy, grating, r2=_r2, r1=_r1, m=_m, gratings=_gratings)
+
+        return _cff
+
+
+
+class PreMirrorAngleSignal(SirepoSignalWithParent):
+    def set(self, value):
+        super().set(value)
+        energy = self.parent.energy.get()
+        self.parent.pre_mirror_angle._readback = energy
+        return NullStatus()
+
+class GratingAngleSignal(SirepoSignalWithParent):
+    def set(self, value):
+        super().set(value)
+        energy = self.parent.energy.get()
+        self.parent.grating_angle._readback = energy
+        return NullStatus()
+
+
+
+class PGMEnergySignal(SignalWithParent):
+    def set(self, value):
+
+        grating = self.parent.grating.get()
+
+        _r2 = self.parent._r2.get()
+        _r1 = self.parent._r1.get()
+        _m = self.parent._m.get()
+        _b = self.parent._b.get()
+        _x_inc = self.parent._x_inc.get()
+        _x_diff = self.parent._x_diff.get()
+        _gratings = self.parent._gratings.get()
+
+        theta_pm, theta_gr = _get_pgm_angles(energy=value, grating=grating, r2=_r2, r1=_r1, m=_m, 
+        gratings=_gratings, x_inc=_x_inc, x_diff=_x_diff, b=_b)
+
+        self.parent.pre_mirror_angle.set(theta_pm)
+        self.parent.grating_angle.set(theta_gr)
+
+
+        self._readback = float(value)
+        return NullStatus()
+
+
+# define the instantiation parameters here.
+_m=1
+_r1=33350 #in mm: 33350 for ARI and 33000 for SXN
+_r2=11500 #in mm: 11500 for ARI and 17500 for SXN
+_x_inc=90 #in degrees
+_x_diff=90 #in degrees
+_b=1 #bounce direction, 1 is up -1 is down
+
+_ari_gratings={'LowE':{'a0':50,'a1':.01868,'a2':1.95E-06,'a3':4E-9},
+              'HighE':{'a0':50,'a1':.02986,'a2':2.87E-06,'a3':8E-9},
+              'HighR':{'a0':200,'a1':.05743,'a2':6.38E-06,'a3':1.5E-8}
+             }
+_sxn_gratings={'LowE':{'a0':150,'a1':.04341,'a2':2.6E-06,'a3':1.5E-8},
+              'MedE':{'a0':350,'a1':.0755,'a2':4.95E-06,'a3':2.5E-8},
+              'HighE':{'a0':350,'a1':.05739,'a2':4.18E-06,'a3':1.2E-8}
+             }
+_gratings=_ari_gratings
+
+
+class PGM(Device):
+    """
+    Plane-grating Monochromator
+    """
+    energy = Cpt(PGMEnergySignal, value=1)
+    grating = Cpt(Signal, value='LowE')
+    grated_harm_num = Cpt(Signal, value=1)
+
+    pre_mirror_angle = Cpt(PreMirrorAngleSignal,
+                         value=m2.grazingAngle.get(),
+                         sirepo_dict=m2.grazingAngle._sirepo_dict,
+                         sirepo_param="grazingAngle")
+
+    grating_angle = Cpt(GratingAngleSignal,  # TODO: update the base class when we deal with the hor. comp.
+                         value=objects['grating'].grazingAngle.get(),
+                         sirepo_dict=objects['grating'].grazingAngle._sirepo_dict,
+                         sirepo_param="grazingAngle")
+
+    _r2 = Cpt(Signal, value=11500)
+
+    _r1 = Cpt(Signal, value=33350)
+
+    _m = Cpt(Signal, value=1)
+
+    _gratings = Cpt(Signal, value={'LowE':{'a0':50,'a1':.01868,'a2':1.95E-06,'a3':4E-9},
+                                    'HighE':{'a0':50,'a1':.02986,'a2':2.87E-06,'a3':8E-9},
+                                    'HighR':{'a0':200,'a1':.05743,'a2':6.38E-06,'a3':1.5E-8}
+                                    })
+
+    _x_inc = Cpt(Signal, value=90) #in degrees
+    _x_diff = Cpt(Signal, value=90) #in degrees
+    _b = Cpt(Signal, value=1) #bounce direction, 1 is up -1 is down
+
+
+    cff = Cpt(CFFSignalRO)
+
+    # ing
+
+    # energy
+    # pre-mirror angle
+    # grating angle
+    # grating harmonic number
+    # grating 
+
+    # We explicitly remove these components from the Sirepo class to avoid
+    # accidental change of them to avoid conflicts.
+
+    # def __init__(self, *args, harmonics_df=None, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     if harmonics_df is None:
+    #         raise ValueError(f"The 'harmonics' kwarg should be a pandas dataframe")
+    #     self._harmonics_df = harmonics_df
+    #     self._interp_kwargs = {"kind": "quadratic", "bounds_error": False, "fill_value": "extrapolate"}
+    #     self.energy.put(self._get_energy())
+
+    # def _get_energy(self):
+    #     magn_field = self.magn_field_ver.get()
+    #     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html
+    #     interp_func = interpolate.interp1d(self._harmonics_df["magn_field"],
+    #                                        self._harmonics_df[f"harmonic{self.harm_num.get()}"],
+    #                                        **self._interp_kwargs)
+    #     return float(interp_func(magn_field))
+
+    # def _get_magn_field(self, energy):
+    #     interp_func = interpolate.interp1d(self._harmonics_df[f"harmonic{self.harm_num.get()}"],
+    #                                        self._harmonics_df["magn_field"],
+    #                                        **self._interp_kwargs)
+    #     return float(interp_func(energy))
+
+
+pgm = PGM(name='pgm')

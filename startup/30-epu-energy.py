@@ -1,4 +1,4 @@
-from ophyd import Signal, Component as Cpt
+from ophyd import Signal, SignalRO, Component as Cpt
 from ophyd.sim import NullStatus
 from scipy import interpolate
 from sirepo_bluesky.sirepo_ophyd import SirepoSignal
@@ -45,7 +45,7 @@ class EPU(classes["undulator"]):
                          value=undulator.verticalAmplitude.get(),
                          sirepo_dict=undulator.verticalAmplitude._sirepo_dict,
                          sirepo_param="verticalAmplitude")
-    magn_field_hor = Cpt(Signal,  # TODO: update the base class when we deal with the hor. comp.
+    magn_field_hor = Cpt(MagnFieldSignal,  # TODO: update the base class when we deal with the hor. comp.
                          value=undulator.horizontalAmplitude.get(),
                          sirepo_dict=undulator.horizontalAmplitude._sirepo_dict,
                          sirepo_param="horizontalAmplitude")
