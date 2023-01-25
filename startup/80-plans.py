@@ -14,3 +14,5 @@ def scan_spectra_vs_mag_field(dets=[single_electron_spectrum],
 
     uid = (yield from bp.scan(dets, parameter, start, stop, num_spectra))
     return uid
+
+# RE(bp.scan([sample], epu.energy, 100, 800, 8))

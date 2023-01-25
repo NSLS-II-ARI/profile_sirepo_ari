@@ -1,8 +1,14 @@
+import os
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import peakutils
 import scipy.signal
+
+
+DATA_DIR = "data"
+HARMONICS_JSON = os.path.join(DATA_DIR, "harmonics.json")
 
 
 def find_peaks(df, harm_num=0, thres=0.10, filter_thres=0.2, ax=None):
@@ -52,6 +58,14 @@ def find_peaks(df, harm_num=0, thres=0.10, filter_thres=0.2, ax=None):
 
 def plot_all_peaks(df, method="scipy", thres=0.10, filter_thres=0.2,
                    num_plots=21, ncols=7, nrows=3):
+    """
+    Usage
+    -----
+
+        df = pd.read_json("data/scan-spectra-vs-und-magn-field.json")
+        all_energies = plot_all_peaks(df, method="peakutils", thres=0.05, filter_thres=0.20)
+
+    """
 
     allowed_methods = ["scipy", "peakutils"]
     if method not in allowed_methods:
@@ -101,3 +115,53 @@ def plot_all_peaks(df, method="scipy", thres=0.10, filter_thres=0.2,
         all_energies[mag_fields[i]] = energy[filtered_peaks_idx]
 
     return all_energies
+
+
+def create_harmonics_dataframe(all_energies, harmonic_list=[1, 3, 5]):
+    """
+    Usage
+    -----
+
+        df_harm = create_harmonics_dataframe(all_energies)
+
+    """
+    magn_field = np.array(list(all_energies.keys()))[::-1]
+    harmonics = {}
+    for harm_num in harmonic_list:
+        harmonics[harm_num] = []
+        for en_list in all_energies.values():
+            internal_idx = int((harm_num + 1) / 2 - 1)
+            if len(en_list) > internal_idx:
+                harmonics[harm_num].append(en_list[internal_idx])
+            else:
+                harmonics[harm_num].append(np.nan)
+        harmonics[harm_num] = np.array(harmonics[harm_num])[::-1]
+
+    data = np.array([magn_field, *[x for x in harmonics.values()]]).T
+    df = pd.DataFrame(data, columns=["magn_field", *[f"harmonic{h}" for h in harmonics.keys()]])
+
+    return df
+
+
+def create_harmonics_json(df, path=HARMONICS_JSON):
+    """
+    Usage
+    -----
+
+        create_harmonics_json(df_harm, path="data/harmonics.json")
+
+    """
+    json_str = json.dumps(json.loads(df.to_json()), indent=2)
+    with open(path, "w") as f:
+        f.write(json_str)
+
+
+def load_harmonics_json(path=HARMONICS_JSON):
+    """
+    Usage
+    -----
+
+        df_harm = load_harmonics_json(path="data/harmonics.json")
+
+    """
+    return pd.read_json(path)
