@@ -10,6 +10,9 @@ class SignalWithParent(Signal):
         if self.parent is None:
             raise RuntimeError("This class should be used as a component in the EPU class")
 
+    def put(self, value): 
+        self.set(value).wait()
+
 
 class SirepoSignalWithParent(SirepoSignal):
     def __init__(self, sirepo_dict, sirepo_param, *args, **kwargs):
@@ -17,6 +20,8 @@ class SirepoSignalWithParent(SirepoSignal):
         if self.parent is None:
             raise RuntimeError("This class should be used as a component in the EPU class")
 
+    def put(self, value): 
+        self.set(value).wait()
 
 class EnergySignal(SignalWithParent):
     def set(self, value):

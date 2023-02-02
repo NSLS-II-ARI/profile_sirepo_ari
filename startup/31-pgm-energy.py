@@ -131,56 +131,56 @@ def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings,
     return (theta_m2, theta_gr)
 
 
-# def _pgm_energy(theta_m2, theta_gr, grating, m=_m, gratings=_gratings,
-#                 x_inc=_x_inc, x_diff=_x_diff, b=_b):
-#     '''
-#     Returns the energy given the M2/grating angles, grating and output focal 
-#     length.
+def _get_pgm_energy(theta_m2, theta_gr, grating, m, gratings,
+                x_inc, x_diff, b):
+    '''
+    Returns the energy given the M2/grating angles, grating and output focal 
+    length.
     
-#     Based on the M2/grating angles, grating, the output focal length and several other 
-#     instantiation time parameters, seen as keywords, this function returns the 
-#     photon energy using the _cff function and the relations:
+    Based on the M2/grating angles, grating, the output focal length and several other 
+    instantiation time parameters, seen as keywords, this function returns the 
+    photon energy using the _cff function and the relations:
     
-#         E_{ph}=(12398.4197/\lambda)1e-7\\
-#         \begin{align}
-#         \text{where: } \lambda &= (sin(\alpha)+sin(\beta))/(ma_{0})\\
-#                        \beta &= - 90 +b(\Theta_{Gr} - X_{diff})\\
-#                        \alpha &= 80 + \beta + b(X_{diff} + X_{inc} - 2\Theta_{M2})
-#         \end{align}
+        E_{ph}=(12398.4197/\lambda)1e-7\\
+        \begin{align}
+        \text{where: } \lambda &= (sin(\alpha)+sin(\beta))/(ma_{0})\\
+                       \beta &= - 90 +b(\Theta_{Gr} - X_{diff})\\
+                       \alpha &= 80 + \beta + b(X_{diff} + X_{inc} - 2\Theta_{M2})
+        \end{align}
     
-#     Parameters
-#     ----------
-#     theta_m2 : float
-#         The angle of the M2 mirror
-#     theta_gr : float
-#         The angle of the Grating
-#     grating : string
-#         The grating name.
-#     m : integer, optional
-#         The diffraction order.
-#     gratings : dict, optional
-#         A dictionary that matches grating names to a dictionary of grating parameters.
-#     x_inc : float, optional
-#         The incident X-ray angle
-#     x_diff : float, optional
-#         The outgoing X-ray angle
-#     b : int, optional
-#         integer indicating the bounce direction: +1 (for upward bounce) or -1 
-#         (for downward bounce)
+    Parameters
+    ----------
+    theta_m2 : float
+        The angle of the M2 mirror
+    theta_gr : float
+        The angle of the Grating
+    grating : string
+        The grating name.
+    m : integer, optional
+        The diffraction order.
+    gratings : dict, optional
+        A dictionary that matches grating names to a dictionary of grating parameters.
+    x_inc : float, optional
+        The incident X-ray angle
+    x_diff : float, optional
+        The outgoing X-ray angle
+    b : int, optional
+        integer indicating the bounce direction: +1 (for upward bounce) or -1 
+        (for downward bounce)
     
-#     Returns
-#     -------
-#     e_ph : float
-#         The photon energy of the PGM in eV.
-#     '''
+    Returns
+    -------
+    e_ph : float
+        The photon energy of the PGM in eV.
+    '''
     
-#     beta = - 90 +b*(theta_gr - x_diff)
-#     alpha = 180 + beta + b*(x_diff + x_inc - 2*theta_m2)
-#     lambda_ = (np.sin(np.radians(alpha))+
-#                np.sin(np.radians(beta)))/(m*gratings[grating]['a0'])
-#     e_ph=(12398.4197/lambda_)*1e-7 #energy in eV
+    beta = - 90 +b*(theta_gr - x_diff)
+    alpha = 180 + beta + b*(x_diff + x_inc - 2*theta_m2)
+    lambda_ = (np.sin(np.radians(alpha))+
+               np.sin(np.radians(beta)))/(m*gratings[grating]['a0'])
+    e_ph=(12398.4197/lambda_)*1e-7 #energy in eV
     
-#     return e_ph
+    return e_ph
 
 # def _cff(e_ph, grating, r2, r1=_r1, m=_m, gratings=_gratings):
 
@@ -224,10 +224,64 @@ class GratingAngleSignal(SirepoSignalWithParent):
         self.parent.grating_angle._readback = energy
         return NullStatus()
 
+class GrooveDensitySignal(SirepoSignalWithParent):
+
+    def set(self, value):
+        super().set(value)
+        #self.parent.grating_angle._readback = energy
+        return NullStatus()
+
+class GratingNameSignal(Signal):
+
+    def set(self, value):
+        super().set(value)
+
+        _r2 = self.parent._r2.get()
+        _r1 = self.parent._r1.get()
+        _m = self.parent._m.get()
+        _b = self.parent._b.get()
+        _x_inc = self.parent._x_inc.get()
+        _x_diff = self.parent._x_diff.get()
+        _gratings = self.parent._gratings.get()
+
+        energy = _get_pgm_energy(self.parent.pre_mirror_angle.get(), self.parent.grating_angle.get(), m=_m, 
+        grating=value, gratings=self.parent._gratings.get(), x_inc=_x_inc, x_diff=_x_diff, b=_b)
+
+        for k, v in self.parent._gratings.get()[value].items():
+            #print(k, v)
+            getattr(self.parent, f'_{k}').put(v)
+
+        self.parent.energy._readback = energy
+        return NullStatus()
 
 
 class PGMEnergySignal(SignalWithParent):
     def set(self, value):
+
+        grating = self.parent.grating.get()
+
+        _r2 = self.parent._r2.get()
+        _r1 = self.parent._r1.get()
+        _m = self.parent._m.get()
+        _b = self.parent._b.get()
+        _x_inc = self.parent._x_inc.get()
+        _x_diff = self.parent._x_diff.get()
+        _gratings = self.parent._gratings.get()
+
+        theta_pm, theta_gr = _get_pgm_angles(energy=value, grating=grating, r2=_r2, r1=_r1, m=_m, 
+        gratings=_gratings, x_inc=_x_inc, x_diff=_x_diff, b=_b)
+
+        self.parent.pre_mirror_angle.set(theta_pm)
+        self.parent.grating_angle.set(theta_gr)
+
+
+        self._readback = float(value)
+        return NullStatus()
+
+class PGMGratingSignal(SignalWithParent):
+    def set(self, value):
+
+        _gratings = self.parent._gratings.get()
 
         grating = self.parent.grating.get()
 
@@ -258,28 +312,36 @@ _x_inc=90 #in degrees
 _x_diff=90 #in degrees
 _b=1 #bounce direction, 1 is up -1 is down
 
-_ari_gratings={'LowE':{'a0':50,'a1':.01868,'a2':1.95E-06,'a3':4E-9},
+_ari_gratings = {'LowE':{'a0':50,'a1':.01868,'a2':1.95E-06,'a3':4E-9},
               'HighE':{'a0':50,'a1':.02986,'a2':2.87E-06,'a3':8E-9},
               'HighR':{'a0':200,'a1':.05743,'a2':6.38E-06,'a3':1.5E-8}
              }
+
 _sxn_gratings={'LowE':{'a0':150,'a1':.04341,'a2':2.6E-06,'a3':1.5E-8},
               'MedE':{'a0':350,'a1':.0755,'a2':4.95E-06,'a3':2.5E-8},
               'HighE':{'a0':350,'a1':.05739,'a2':4.18E-06,'a3':1.2E-8}
              }
-_gratings=_ari_gratings
 
 
 class PGM(Device):
     """
     Plane-grating Monochromator
     """
+
+    _gratings = Cpt(Signal, value=_ari_gratings)
+
     energy = Cpt(PGMEnergySignal, value=1)
-    grating = Cpt(Signal, value='LowE')
+    grating_name = Cpt(GratingNameSignal, value='LowE')
     grated_harm_num = Cpt(Signal, value=1)
 
+    grating_dict = {'LowE':{'a0':50,'a1':.01868,'a2':1.95E-06,'a3':4E-9},
+                                    'HighE':{'a0':50,'a1':.02986,'a2':2.87E-06,'a3':8E-9},
+                                    'HighR':{'a0':200,'a1':.05743,'a2':6.38E-06,'a3':1.5E-8}
+                                    }
+
     pre_mirror_angle = Cpt(PreMirrorAngleSignal,
-                         value=m2.grazingAngle.get(),
-                         sirepo_dict=m2.grazingAngle._sirepo_dict,
+                         value=objects['m2'].grazingAngle.get(),
+                         sirepo_dict=objects['m2'].grazingAngle._sirepo_dict,
                          sirepo_param="grazingAngle")
 
     grating_angle = Cpt(GratingAngleSignal,  # TODO: update the base class when we deal with the hor. comp.
@@ -287,23 +349,26 @@ class PGM(Device):
                          sirepo_dict=objects['grating'].grazingAngle._sirepo_dict,
                          sirepo_param="grazingAngle")
 
+
     _r2 = Cpt(Signal, value=11500)
 
     _r1 = Cpt(Signal, value=33350)
 
     _m = Cpt(Signal, value=1)
 
-    _gratings = Cpt(Signal, value={'LowE':{'a0':50,'a1':.01868,'a2':1.95E-06,'a3':4E-9},
-                                    'HighE':{'a0':50,'a1':.02986,'a2':2.87E-06,'a3':8E-9},
-                                    'HighR':{'a0':200,'a1':.05743,'a2':6.38E-06,'a3':1.5E-8}
-                                    })
-
     _x_inc = Cpt(Signal, value=90) #in degrees
     _x_diff = Cpt(Signal, value=90) #in degrees
     _b = Cpt(Signal, value=1) #bounce direction, 1 is up -1 is down
 
-
     cff = Cpt(CFFSignalRO)
+
+    _a0 = Cpt(SirepoSignalWithParent, value=objects['grating'].grooveDensity0.get(), sirepo_dict=objects['grating'].grooveDensity0._sirepo_dict, sirepo_param="grooveDensity0")
+    _a1 = Cpt(SirepoSignalWithParent, value=objects['grating'].grooveDensity1.get(), sirepo_dict=objects['grating'].grooveDensity1._sirepo_dict, sirepo_param="grooveDensity1")
+    _a2 = Cpt(SirepoSignalWithParent, value=objects['grating'].grooveDensity2.get(), sirepo_dict=objects['grating'].grooveDensity2._sirepo_dict, sirepo_param="grooveDensity2")
+    _a3 = Cpt(SirepoSignalWithParent, value=objects['grating'].grooveDensity3.get(), sirepo_dict=objects['grating'].grooveDensity3._sirepo_dict, sirepo_param="grooveDensity3")
+
+    
+
 
     # ing
 
