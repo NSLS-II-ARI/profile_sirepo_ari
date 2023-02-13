@@ -10,9 +10,9 @@ import numpy as np
 def _get_cff(e_ph, grating, r2, r1, m, gratings):
     '''
     Returns the fine focus constant given the energy, grating and output focal length.
-    
-    Based on the photon energy, grating, the output focal length and several other 
-    instantiation time parameters, seen as keywords, this function returns the fine 
+
+    Based on the photon energy, grating, the output focal length and several other
+    instantiation time parameters, seen as keywords, this function returns the fine
     focus constant using the relations:
     $$c_{ff} = \sqrt((B_{0}+B_{1})/B{2})\\
         \begin{align}
@@ -28,7 +28,7 @@ def _get_cff(e_ph, grating, r2, r1, m, gratings):
         \end{align}
     $$
 
-    Units for each parameter are: eV for energies, mm for lengths and mm^{-1}/ 
+    Units for each parameter are: eV for energies, mm for lengths and mm^{-1}/
     mm^{-2}/ mm^{-3}/ mm^{-4} for the respective grating equation parameters.
 
     Parameters
@@ -38,20 +38,20 @@ def _get_cff(e_ph, grating, r2, r1, m, gratings):
     grating : string
         The grating name.
     r2 : float
-        The output focal length for the PGM in mm    
+        The output focal length for the PGM in mm
     r1 : float, optional
         The input focal length for the PGM in mm
     m : integer, optional
         The diffraction order.
     gratings : dict, optional
         A dictionary that matches grating names to a dictionary of grating parameters.
-        
+
     Returns
     -------
     cff : float
         The fine focus constant.
     '''
-    
+
     lambda_ = (12398.4197/e_ph)*1E-7 # wavelength in mm from e_ph in eV
     A1 = -0.5*m*lambda_*r2*gratings[grating]['a1']
     A0 = m*lambda_*gratings[grating]['a0']
@@ -59,7 +59,7 @@ def _get_cff(e_ph, grating, r2, r1, m, gratings):
     B1 = -4*(A1/A0)*np.sqrt((1+r2/r1)**2+2*A1*(1+r2/r1)-A0**2*(r2/r1))
     B0 = 2*A1+4*(A1/A0)**2+(4+2*A1-A0**2)*(r2/r1)
     cff = np.sqrt((B0+B1)/B2)
-    
+
     return cff
 
 
@@ -67,12 +67,12 @@ def _get_cff(e_ph, grating, r2, r1, m, gratings):
 def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings,
                 x_inc, x_diff, b):
     '''
-    Returns the M2/Grating angles given the photon energy, grating and output focal 
+    Returns the M2/Grating angles given the photon energy, grating and output focal
     length.
-    
-    Based on the photon energy, grating, the output focal length and several other 
-    instantiation time parameters, seen as keywords, this function returns the 
-    required angles for the M2 mirror and the grating using the _cff function and 
+
+    Based on the photon energy, grating, the output focal length and several other
+    instantiation time parameters, seen as keywords, this function returns the
+    required angles for the M2 mirror and the grating using the _cff function and
     the relations:
     $$
         \Theta_{M2} = \frac{1}{2}(X_{diff}+X_{inc}+b(180-\alpha+\beta))\\
@@ -84,11 +84,11 @@ def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings,
                         \lambda &= (12398.4197/E_{ph})1e-7\\
         \end{align}
     $$
-    
+
     Units for each parameter are: eV for energies, mm for lengths, degrees for angles
-    and mm^{-1}/ mm^{-2}/ mm^{-3}/ mm^{-4} for the respective grating equation 
+    and mm^{-1}/ mm^{-2}/ mm^{-3}/ mm^{-4} for the respective grating equation
     parameters.
-    
+
     Parameters
     ----------
     E_ph : float
@@ -96,7 +96,7 @@ def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings,
     grating : string
         The grating name.
     r2 : float
-        The output focal length for the PGM in mm    
+        The output focal length for the PGM in mm
     r1 : float, optional
         The input focal length for the PGM in mm
     m : integer, optional
@@ -108,9 +108,9 @@ def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings,
     x_diff : float, optional
         The outgoing X-ray angle
     b : int, optional
-        integer indicating the bounce direction: +1 (for upward bounce) or -1 
+        integer indicating the bounce direction: +1 (for upward bounce) or -1
         (for downward bounce)
-    
+
     Returns
     -------
     (theta_m2, theta_gr) : (float, float)
@@ -120,34 +120,34 @@ def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings,
     ## need r2 and r1 as args/kwargs (but I will need cff as an arg)
     lambda_ = (12398.4197/e_ph)*1E-7 # wavelength in mm from e_ph in eV
     #NOTE the next line may be better read from the read-only axis instead of calculating
-    cff = _cff(e_ph, grating, r2, r1=r1, m=m, gratings=gratings) 
+    cff = _cff(e_ph, grating, r2, r1=r1, m=m, gratings=gratings)
     alpha =np.degrees(np.arcsin(-m*gratings[grating]['a0']*lambda_/(cff**2-1)+
                       np.sqrt(1+(cff*m*gratings[grating]['a0']*lambda_/(cff**2-1))**2)))
     beta = np.degrees(np.arcsin(m*gratings[grating]['a0']*lambda_-
                                 np.sin(np.radians(alpha))))
     theta_m2 = abs(0.5*(x_diff+x_inc+b*(180-alpha+beta)))
     theta_gr = b*(90+beta)+x_diff
-    
+
     return (theta_m2, theta_gr)
 
 
 def _get_pgm_energy(theta_m2, theta_gr, grating, m, gratings,
-                x_inc, x_diff, b):
+                    x_inc, x_diff, b):
     '''
-    Returns the energy given the M2/grating angles, grating and output focal 
+    Returns the energy given the M2/grating angles, grating and output focal
     length.
-    
-    Based on the M2/grating angles, grating, the output focal length and several other 
-    instantiation time parameters, seen as keywords, this function returns the 
+
+    Based on the M2/grating angles, grating, the output focal length and several other
+    instantiation time parameters, seen as keywords, this function returns the
     photon energy using the _cff function and the relations:
-    
+
         E_{ph}=(12398.4197/\lambda)1e-7\\
         \begin{align}
         \text{where: } \lambda &= (sin(\alpha)+sin(\beta))/(ma_{0})\\
                        \beta &= - 90 +b(\Theta_{Gr} - X_{diff})\\
-                       \alpha &= 80 + \beta + b(X_{diff} + X_{inc} - 2\Theta_{M2})
+                       \alpha &= 180 + \beta + b(X_{diff} + X_{inc} - 2\Theta_{M2})
         \end{align}
-    
+
     Parameters
     ----------
     theta_m2 : float
@@ -165,21 +165,21 @@ def _get_pgm_energy(theta_m2, theta_gr, grating, m, gratings,
     x_diff : float, optional
         The outgoing X-ray angle
     b : int, optional
-        integer indicating the bounce direction: +1 (for upward bounce) or -1 
+        integer indicating the bounce direction: +1 (for upward bounce) or -1
         (for downward bounce)
-    
+
     Returns
     -------
     e_ph : float
         The photon energy of the PGM in eV.
     '''
-    
+
     beta = - 90 +b*(theta_gr - x_diff)
     alpha = 180 + beta + b*(x_diff + x_inc - 2*theta_m2)
     lambda_ = (np.sin(np.radians(alpha))+
                np.sin(np.radians(beta)))/(m*gratings[grating]['a0'])
     e_ph=(12398.4197/lambda_)*1e-7 #energy in eV
-    
+
     return e_ph
 
 # def _cff(e_ph, grating, r2, r1=_r1, m=_m, gratings=_gratings):
@@ -188,51 +188,58 @@ def _get_pgm_energy(theta_m2, theta_gr, grating, m, gratings,
 #def _get_pgm_angles(e_ph, grating, r2, r1=_r1, m=_m, gratings=_gratings,
 #                x_inc=_x_inc, x_diff=_x_diff, b=_b):
 
+
 class CFFSignalRO(SignalRO):
-
     def get(self):
-
         energy = self.parent.energy.get()
-
-        grating = self.parent.grating.get()
-
+        grating = self.parent.grating_name.get()
         _r2 = self.parent._r2.get()
-
         _r1 = self.parent._r1.get()
-
         _m = self.parent._m.get()
-
         _gratings = self.parent._gratings.get()
 
         _cff = _get_cff(energy, grating, r2=_r2, r1=_r1, m=_m, gratings=_gratings)
 
+        self._readback = _cff
+        self._value = _cff
+
         return _cff
 
 
-
 class PreMirrorAngleSignal(SirepoSignalWithParent):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._value = np.degrees(self._readback * 1.e-3)  # _readback is in mrad, converting _value to deg.
+        self._readback = self._value  # needs to be in deg too.
+
     def set(self, value):
-        super().set(value)
-        energy = self.parent.energy.get()
-        self.parent.pre_mirror_angle._readback = energy
+        super().set(np.radians(value) * 1e3)  # updates Sirepo model, needs to be in mrad
+        self.parent.pre_mirror_angle._readback = float(value)  # in degrees.
+        self._value = float(value)
         return NullStatus()
+
 
 class GratingAngleSignal(SirepoSignalWithParent):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._value = np.degrees(self._readback * 1.e-3)  # _readback is in mrad, converting _value to deg.
+        self._readback = self._value  # needs to be in deg too.
+
     def set(self, value):
-        super().set(value)
-        energy = self.parent.energy.get()
-        self.parent.grating_angle._readback = energy
+        super().set(np.radians(value) * 1e3)  # updates Sirepo model, needs to be in mrad.
+        self.parent.grating_angle._readback = float(value)  # in degrees.
+        self._value = float(value)
         return NullStatus()
 
-class GrooveDensitySignal(SirepoSignalWithParent):
 
+class GrooveDensitySignal(SirepoSignalWithParent):
     def set(self, value):
         super().set(value)
         #self.parent.grating_angle._readback = energy
         return NullStatus()
 
-class GratingNameSignal(Signal):
 
+class GratingNameSignal(Signal):
     def set(self, value):
         super().set(value)
 
@@ -244,11 +251,22 @@ class GratingNameSignal(Signal):
         _x_diff = self.parent._x_diff.get()
         _gratings = self.parent._gratings.get()
 
-        energy = _get_pgm_energy(self.parent.pre_mirror_angle.get(), self.parent.grating_angle.get(), m=_m, 
-        grating=value, gratings=self.parent._gratings.get(), x_inc=_x_inc, x_diff=_x_diff, b=_b)
+        # def _get_pgm_energy(theta_m2, theta_gr, grating, m, gratings,
+        #                     x_inc, x_diff, b):
 
-        for k, v in self.parent._gratings.get()[value].items():
-            #print(k, v)
+        energy = _get_pgm_energy(
+            self.parent.pre_mirror_angle.get(),
+            self.parent.grating_angle.get(),
+            m=_m,
+            grating=value,
+            gratings=_gratings,
+            x_inc=_x_inc,
+            x_diff=_x_diff,
+            b=_b
+        )
+
+        for k, v in _gratings[value].items():
+            # print(k, v)
             getattr(self.parent, f'_{k}').put(v)
 
         self.parent.energy._readback = energy
@@ -256,8 +274,8 @@ class GratingNameSignal(Signal):
 
 
 class PGMEnergySignal(SignalWithParent):
-    def set(self, value):
-
+    def set(self, value):  # value is in eV.
+        _gratings = self.parent._gratings.get()
         grating = self.parent.grating.get()
 
         _r2 = self.parent._r2.get()
@@ -266,34 +284,8 @@ class PGMEnergySignal(SignalWithParent):
         _b = self.parent._b.get()
         _x_inc = self.parent._x_inc.get()
         _x_diff = self.parent._x_diff.get()
-        _gratings = self.parent._gratings.get()
 
-        theta_pm, theta_gr = _get_pgm_angles(energy=value, grating=grating, r2=_r2, r1=_r1, m=_m, 
-        gratings=_gratings, x_inc=_x_inc, x_diff=_x_diff, b=_b)
-
-        self.parent.pre_mirror_angle.set(theta_pm)
-        self.parent.grating_angle.set(theta_gr)
-
-
-        self._readback = float(value)
-        return NullStatus()
-
-class PGMGratingSignal(SignalWithParent):
-    def set(self, value):
-
-        _gratings = self.parent._gratings.get()
-
-        grating = self.parent.grating.get()
-
-        _r2 = self.parent._r2.get()
-        _r1 = self.parent._r1.get()
-        _m = self.parent._m.get()
-        _b = self.parent._b.get()
-        _x_inc = self.parent._x_inc.get()
-        _x_diff = self.parent._x_diff.get()
-        _gratings = self.parent._gratings.get()
-
-        theta_pm, theta_gr = _get_pgm_angles(energy=value, grating=grating, r2=_r2, r1=_r1, m=_m, 
+        theta_pm, theta_gr = _get_pgm_angles(energy=value, grating=grating, r2=_r2, r1=_r1, m=_m,
         gratings=_gratings, x_inc=_x_inc, x_diff=_x_diff, b=_b)
 
         self.parent.pre_mirror_angle.set(theta_pm)
@@ -330,14 +322,14 @@ class PGM(Device):
 
     _gratings = Cpt(Signal, value=_ari_gratings)
 
-    energy = Cpt(PGMEnergySignal, value=1)
+    energy = Cpt(PGMEnergySignal, value=1.0)
     grating_name = Cpt(GratingNameSignal, value='LowE')
     grated_harm_num = Cpt(Signal, value=1)
 
     grating_dict = {'LowE':{'a0':50,'a1':.01868,'a2':1.95E-06,'a3':4E-9},
-                                    'HighE':{'a0':50,'a1':.02986,'a2':2.87E-06,'a3':8E-9},
-                                    'HighR':{'a0':200,'a1':.05743,'a2':6.38E-06,'a3':1.5E-8}
-                                    }
+                    'HighE':{'a0':50,'a1':.02986,'a2':2.87E-06,'a3':8E-9},
+                    'HighR':{'a0':200,'a1':.05743,'a2':6.38E-06,'a3':1.5E-8}
+                    }
 
     pre_mirror_angle = Cpt(PreMirrorAngleSignal,
                          value=objects['m2'].grazingAngle.get(),
@@ -367,7 +359,7 @@ class PGM(Device):
     _a2 = Cpt(SirepoSignalWithParent, value=objects['grating'].grooveDensity2.get(), sirepo_dict=objects['grating'].grooveDensity2._sirepo_dict, sirepo_param="grooveDensity2")
     _a3 = Cpt(SirepoSignalWithParent, value=objects['grating'].grooveDensity3.get(), sirepo_dict=objects['grating'].grooveDensity3._sirepo_dict, sirepo_param="grooveDensity3")
 
-    
+
 
 
     # ing
@@ -376,7 +368,7 @@ class PGM(Device):
     # pre-mirror angle
     # grating angle
     # grating harmonic number
-    # grating 
+    # grating
 
     # We explicitly remove these components from the Sirepo class to avoid
     # accidental change of them to avoid conflicts.
@@ -405,3 +397,10 @@ class PGM(Device):
 
 
 pgm = PGM(name='pgm')
+
+# TODO next time:
+# pgm.energy does not update correctly on updated grating name:
+#  pgm.grating_name.set("HighR")
+#  pgm.get()
+#  Out[30]: PGMTuple(energy=48.20841483027628, grating_name='HighR', grated_harm_num=1, pre_mirror_angle=1.9440307873846507, grating_angle=1.7965903441857909, cff=1.7432741334354067)
+# Expected: 250 eV (based on Sirepo 00000003 sim).
