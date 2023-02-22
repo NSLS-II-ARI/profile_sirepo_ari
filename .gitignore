@@ -129,5 +129,6 @@ dmypy.json
 .pyre/
 
 .idea/
+.vscode/
 history.sqlite
 startup/README
