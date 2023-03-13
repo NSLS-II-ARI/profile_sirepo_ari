@@ -62,7 +62,7 @@ def _get_cff(e_ph, grating, r2, r1, m, gratings):
     return cff
 
 
-def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings, x_inc, x_diff, b):
+def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings, x_inc, x_diff, b, cff=None):
     """
     Returns the M2/Grating angles given the photon energy, grating and output focal
     length.
@@ -117,7 +117,12 @@ def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings, x_inc, x_diff, b):
     ## need r2 and r1 as args/kwargs (but I will need cff as an arg)
     lambda_ = (12398.4197 / e_ph) * 1e-7  # wavelength in mm from e_ph in eV
     # NOTE the next line may be better read from the read-only axis instead of calculating
-    cff = _get_cff(e_ph, grating, r2, r1=r1, m=m, gratings=gratings)
+
+    if cff is None:
+        cff = _get_cff(e_ph, grating, r2, r1=r1, m=m, gratings=gratings)
+
+    print(f"{cff = }")
+
     alpha = np.degrees(
         np.arcsin(
             -m * gratings[grating]["a0"] * lambda_ / (cff**2 - 1)
@@ -200,7 +205,10 @@ def _get_pgm_energy(theta_m2, theta_gr, grating, m, gratings, x_inc, x_diff, b):
 #                x_inc=_x_inc, x_diff=_x_diff, b=_b):
 
 
-class CFFSignalRO(SignalRO):
+class CFFSignal(SirepoSignalWithParent):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     def get(self):
         energy = self.parent.energy.get()
         grating = self.parent.grating_name.get()
@@ -211,10 +219,18 @@ class CFFSignalRO(SignalRO):
 
         _cff = _get_cff(energy, grating, r2=_r2, r1=_r1, m=_m, gratings=_gratings)
 
-        self._readback = _cff
-        self._value = _cff
+        self.set(_cff).wait()
+
+        # self._readback = _cff
+        # self._value = _cff
 
         return _cff
+
+    def set(self, value):
+        super().set(value)
+        self._readback = float(value)
+        self._value = float(value)
+        return NullStatus()
 
 
 class PreMirrorAngleSignal(SirepoSignalWithParent):
@@ -281,6 +297,7 @@ class GratingNameSignal(Signal):
 
         self.parent.energy._readback = energy
         self.parent.energy._value = energy
+        self.parent.cff.get()
 
     def set(self, *args, **kwargs):
         self.put(*args, **kwargs)
@@ -293,6 +310,10 @@ class PGMEnergySignal(SignalWithParent):
     #     self.put()
 
     def set(self, value):  # value is in eV.
+        self._readback = float(value)
+        # TODO: redo it with SirepoSignal.
+        connection.data["models"]["simulation"]["photonEnergy"] = float(value)
+
         _gratings = self.parent._gratings.get()
         grating = self.parent.grating_name.get()
 
@@ -302,6 +323,7 @@ class PGMEnergySignal(SignalWithParent):
         _b = self.parent._b.get()
         _x_inc = self.parent._x_inc.get()
         _x_diff = self.parent._x_diff.get()
+        _cff = self.parent.cff.get()
 
         # e_ph, grating, r2, r1, m, gratings, x_inc, x_diff, b
         theta_pm, theta_gr = _get_pgm_angles(
@@ -314,25 +336,22 @@ class PGMEnergySignal(SignalWithParent):
             x_inc=_x_inc,
             x_diff=_x_diff,
             b=_b,
+            cff=_cff,
         )
 
         self.parent.pre_mirror_angle.set(theta_pm)
         self.parent.grating_angle.set(theta_gr)
 
-        self._readback = float(value)
-        # TODO: redo it with SirepoSignal.
-        connection.data["models"]["simulation"]["photonEnergy"] = float(value)
-
         return NullStatus()
 
 
-# define the instantiation parameters here.
-_m = 1
-_r1 = 33350  # in mm: 33350 for ARI and 33000 for SXN
-_r2 = 11500  # in mm: 11500 for ARI and 17500 for SXN
-_x_inc = 90  # in degrees
-_x_diff = 90  # in degrees
-_b = 1  # bounce direction, 1 is up -1 is down
+# # define the instantiation parameters here.
+# _m = 1
+# _r1 = 33350  # in mm: 33350 for ARI and 33000 for SXN
+# _r2 = 11500  # in mm: 11500 for ARI and 17500 for SXN
+# _x_inc = 90  # in degrees
+# _x_diff = 90  # in degrees
+# _b = 1  # bounce direction, 1 is up -1 is down
 
 _ari_gratings = {
     "LowE": {"a0": 50, "a1": 0.01868, "a2": 1.95e-06, "a3": 4e-9},
@@ -378,17 +397,24 @@ class PGM(Device):
         sirepo_param="grazingAngle",
     )
 
-    _r2 = Cpt(Signal, value=11500)  # 43.6 m (vertical slit) - 32.1 m
+    grating_output_focal_len = objects["v_slit"].element_position.get() - objects["grating"].element_position.get()  # in [m]
+    _r2 = Cpt(Signal, value= grating_output_focal_len * 1e3)  # input in [mm]; 43.6 m (vertical slit) - 32.1 m
 
-    _r1 = Cpt(Signal, value=32100)  # 32.1 m position for grating from Sirepo
+    grating_input_focal_len = objects["grating"].element_position.get()  # in [m]
+    _r1 = Cpt(Signal, value=grating_input_focal_len * 1e3)  # input in [mm]; 32.1 m position for grating from Sirepo
 
-    _m = Cpt(Signal, value=1)
+    _m = Cpt(Signal, value=1)  #  Diffraction Order in Sirepo
 
     _x_inc = Cpt(Signal, value=90)  # in degrees
     _x_diff = Cpt(Signal, value=90)  # in degrees
     _b = Cpt(Signal, value=1)  # bounce direction, 1 is up -1 is down
 
-    cff = Cpt(CFFSignalRO)
+    cff = Cpt(
+        CFFSignal,
+        value=objects["grating"].cff.get(),
+        sirepo_dict=objects["grating"].cff._sirepo_dict,
+        sirepo_param="cff",
+    )
 
     _a0 = Cpt(
         SirepoSignalWithParent,
@@ -414,14 +440,6 @@ class PGM(Device):
         sirepo_dict=objects["grating"].grooveDensity3._sirepo_dict,
         sirepo_param="grooveDensity3",
     )
-
-    # ing
-
-    # energy
-    # pre-mirror angle
-    # grating angle
-    # grating harmonic number
-    # grating
 
     # We explicitly remove these components from the Sirepo class to avoid
     # accidental change of them to avoid conflicts.
@@ -450,13 +468,3 @@ class PGM(Device):
 
 
 pgm = PGM(name="pgm")
-
-# TODO next time:
-# pgm.energy does not update correctly on updated grating name:
-#  pgm.grating_name.set("HighR")
-#  pgm.get()
-#  Out[30]: PGMTuple(energy=48.20841483027628, grating_name='HighR', grated_harm_num=1, pre_mirror_angle=1.9440307873846507, grating_angle=1.7965903441857909, cff=1.7432741334354067)
-# Expected: 250 eV (based on Sirepo 00000003 sim).
-
-# TODO 2:
-# Check how to coordinate the pre-mirror and grating angles.
