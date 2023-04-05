@@ -205,11 +205,13 @@ def _get_pgm_energy(theta_m2, theta_gr, grating, m, gratings, x_inc, x_diff, b):
 #                x_inc=_x_inc, x_diff=_x_diff, b=_b):
 
 
-class CFFSignal(SirepoSignalWithParent):
+class CFFSignalRO(SirepoSignalWithParent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def get(self):
+
+    
         energy = self.parent.energy.get()
         grating = self.parent.grating_name.get()
         _r2 = self.parent._r2.get()
@@ -219,18 +221,12 @@ class CFFSignal(SirepoSignalWithParent):
 
         _cff = _get_cff(energy, grating, r2=_r2, r1=_r1, m=_m, gratings=_gratings)
 
-        self.set(_cff).wait()
+        self.parent._sirepo_dict["cff"] = _cff
 
-        # self._readback = _cff
+        self._readback = _cff
         # self._value = _cff
 
         return _cff
-
-    def set(self, value):
-        super().set(value)
-        self._readback = float(value)
-        self._value = float(value)
-        return NullStatus()
 
 
 class PreMirrorAngleSignal(SirepoSignalWithParent):
@@ -271,8 +267,8 @@ class GratingNameSignal(Signal):
     def put(self, value):
         super().put(value)
 
-        _r2 = self.parent._r2.get()
-        _r1 = self.parent._r1.get()
+        # _r2 = self.parent._r2.get()
+        # _r1 = self.parent._r1.get()
         _m = self.parent._m.get()
         _b = self.parent._b.get()
         _x_inc = self.parent._x_inc.get()
@@ -311,8 +307,8 @@ class PGMEnergySignal(SignalWithParent):
 
     def set(self, value):  # value is in eV.
         self._readback = float(value)
-        # TODO: redo it with SirepoSignal.
-        connection.data["models"]["simulation"]["photonEnergy"] = float(value)
+
+        self.parent._sirepo_dict["photonEnergy"] = float(value)
 
         _gratings = self.parent._gratings.get()
         grating = self.parent.grating_name.get()
@@ -410,7 +406,7 @@ class PGM(Device):
     _b = Cpt(Signal, value=1)  # bounce direction, 1 is up -1 is down
 
     cff = Cpt(
-        CFFSignal,
+        CFFSignalRO,
         value=objects["grating"].cff.get(),
         sirepo_dict=objects["grating"].cff._sirepo_dict,
         sirepo_param="cff",
