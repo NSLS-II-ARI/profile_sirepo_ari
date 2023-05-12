@@ -369,7 +369,7 @@ class PGM(Device):
 
     _gratings = Cpt(Signal, value=_ari_gratings)
 
-    energy = Cpt(PGMEnergySignal, value=connection.data["models"]["simulation"]["photonEnergy"])
+    energy = Cpt(PGMEnergySignal, value=connection.data["models"]["simulation"]["photonEnergy"], kind="hinted")
     grating_name = Cpt(GratingNameSignal, value="HighR")
     grated_harm_num = Cpt(Signal, value=1)
 
@@ -467,3 +467,8 @@ pgm = PGM(name="pgm")
 pgm.grating_name.set("HighR")
 
 pgm.energy.set(connection.data["models"]["simulation"]["photonEnergy"])
+pgm.kind = "hinted"
+# pgm.energy.kind = "hinted"
+
+after_v_slit.kind = "hinted"
+after_v_slit.mean.kind = "hinted"
