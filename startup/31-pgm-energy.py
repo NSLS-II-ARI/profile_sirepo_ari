@@ -121,8 +121,6 @@ def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings, x_inc, x_diff, b, cff=No
     if cff is None:
         cff = _get_cff(e_ph, grating, r2, r1=r1, m=m, gratings=gratings)
 
-    print(f"{cff = }")
-
     alpha = np.degrees(
         np.arcsin(
             -m * gratings[grating]["a0"] * lambda_ / (cff**2 - 1)
