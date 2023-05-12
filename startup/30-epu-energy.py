@@ -90,5 +90,5 @@ df_harm = load_harmonics_json(path=HARMONICS_JSON)
 # plt.scatter(df_harm["magn_field"]-0.05, f(df_harm["magn_field"]-0.05))
 
 epu = EPU(name="epu", harmonics_df=df_harm)
-epu.kind = 'hinted'
-epu.energy.kind = 'hinted'
+epu.kind = "hinted"
+epu.energy.kind = "hinted"

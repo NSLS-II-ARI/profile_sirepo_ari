@@ -221,7 +221,7 @@ class CFFSignalRO(SirepoSignalWithParent):
 
         _cff = _get_cff(energy, grating, r2=_r2, r1=_r1, m=_m, gratings=_gratings)
 
-        self.parent._sirepo_dict["cff"] = _cff
+        self._sirepo_dict["cff"] = _cff
 
         self._readback = _cff
         # self._value = _cff
@@ -308,7 +308,7 @@ class PGMEnergySignal(SignalWithParent):
     def set(self, value):  # value is in eV.
         self._readback = float(value)
 
-        self.parent._sirepo_dict["photonEnergy"] = float(value)
+        connection.data["models"]["simulation"]["photonEnergy"] = float(value)
 
         _gratings = self.parent._gratings.get()
         grating = self.parent.grating_name.get()
@@ -464,3 +464,6 @@ class PGM(Device):
 
 
 pgm = PGM(name="pgm")
+pgm.grating_name.set("HighR")
+
+pgm.energy.set(connection.data["models"]["simulation"]["photonEnergy"])
