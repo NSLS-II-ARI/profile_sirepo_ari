@@ -60,7 +60,7 @@ jobs:
         uses: supercharge/mongodb-github-action@1.6.0
 
       - name: Start Sirepo Docker container
-        uses: NSLS-II/start-sirepo-action@v1
+        uses: NSLS-II/start-sirepo-action@v2
         with:
           docker-binary: docker
 
