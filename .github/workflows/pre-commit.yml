@@ -1,0 +1,27 @@
+name: pre-commit
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    name: Check code style
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v2
+
+      - name: Install dev dependencies
+        run: |
+          set -vxeuo pipefail
+          python3 -m pip install pre-commit black isort
+          python3 -m pip list
+
+      - name: Run pre-commit
+        run: pre-commit run --all-files
