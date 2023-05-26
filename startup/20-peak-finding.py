@@ -1,11 +1,11 @@
-import os
 import json
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import peakutils
 import scipy.signal
-
 
 DATA_DIR = "data"
 HARMONICS_JSON = os.path.join(DATA_DIR, "harmonics.json")
@@ -18,7 +18,7 @@ def find_peaks(df, harm_num=0, thres=0.10, filter_thres=0.2, ax=None):
     intensities = np.array(list(df["single_electron_spectrum_image"]))
     mag_fields = np.array(list(df["undulator_verticalAmplitude"]))
 
-    lookup = pd.DataFrame(columns=['mag_field', 'energy'])
+    lookup = pd.DataFrame(columns=["mag_field", "energy"])
 
     if ax is None:
         fig, ax = plt.subplots(nrows=1, ncols=1)
@@ -37,27 +37,36 @@ def find_peaks(df, harm_num=0, thres=0.10, filter_thres=0.2, ax=None):
         filtered_peaks_idx = [idx[0]]
 
         for idx in idx[1:]:
-            print(f"{intensity[idx] = :2g}  {intensity[idx-1] =:2e}  {intensity[idx-1] / intensity[idx] = }")
-            if intensity[idx-1] / intensity[idx] >= filter_thres:
+            print(
+                f"{intensity[idx] = :2g}  {intensity[idx-1] =:2e}  {intensity[idx-1] / intensity[idx] = }"
+            )
+            if intensity[idx - 1] / intensity[idx] >= filter_thres:
                 filtered_peaks_idx.append(idx)
 
-        print(f"{energy[filtered_peaks_idx][harm_num] = :8.3f} [eV]  "
-              f"{intensity[filtered_peaks_idx][harm_num] = :3g} [arb.u.]  "
-              f"{mag_field = :.3f} [T]")
+        print(
+            f"{energy[filtered_peaks_idx][harm_num] = :8.3f} [eV]  "
+            f"{intensity[filtered_peaks_idx][harm_num] = :3g} [arb.u.]  "
+            f"{mag_field = :.3f} [T]"
+        )
 
         lookup.loc[len(lookup)] = mag_field, energy[filtered_peaks_idx][harm_num]
 
-    ax.plot(lookup["mag_field"], lookup["energy"],
-            label=f"Harmonic #{harm_num + 1}",
-            marker="o", linestyle='dashed')
+    ax.plot(
+        lookup["mag_field"],
+        lookup["energy"],
+        label=f"Harmonic #{harm_num + 1}",
+        marker="o",
+        linestyle="dashed",
+    )
 
     ax.legend(prop={"size": 6})
 
     return lookup
 
 
-def plot_all_peaks(df, method="scipy", thres=0.10, filter_thres=0.2,
-                   num_plots=21, ncols=7, nrows=3):
+def plot_all_peaks(
+    df, method="scipy", thres=0.10, filter_thres=0.2, num_plots=21, ncols=7, nrows=3
+):
     """
     Usage
     -----
@@ -76,7 +85,9 @@ def plot_all_peaks(df, method="scipy", thres=0.10, filter_thres=0.2,
     mag_fields = np.array(list(df["undulator_verticalAmplitude"]))
 
     fig, axes = plt.subplots(ncols=ncols, nrows=nrows, figsize=(ncols * 4, nrows * 3))
-    fig.suptitle(f"{method} / threshold={thres * 100:.0f}% / filter threshold={filter_thres * 100:.0f}%")
+    fig.suptitle(
+        f"{method} / threshold={thres * 100:.0f}% / filter threshold={filter_thres * 100:.0f}%"
+    )
 
     all_energies = {}
 
@@ -87,7 +98,9 @@ def plot_all_peaks(df, method="scipy", thres=0.10, filter_thres=0.2,
 
         # TODO: implement it via the `find_peaks()` function.
         if method == "scipy":
-            peaks_idx = scipy.signal.find_peaks(intensity, height=intensity.max() * thres)[0]
+            peaks_idx = scipy.signal.find_peaks(
+                intensity, height=intensity.max() * thres
+            )[0]
         elif method == "peakutils":
             peaks_idx = peakutils.indexes(intensity, thres=thres)
 
@@ -107,7 +120,12 @@ def plot_all_peaks(df, method="scipy", thres=0.10, filter_thres=0.2,
         print(f"{len(peaks_idx) = } -> {len(filtered_peaks_idx) = }\n")
 
         ax.plot(energy, intensity, label=f"{i:3d}: {mag_field:.2f}T full")
-        ax.plot(energy[filtered_peaks_idx], intensity[filtered_peaks_idx], marker="x", label=f"{i:3d}: {mag_field:.2f}T peaks")
+        ax.plot(
+            energy[filtered_peaks_idx],
+            intensity[filtered_peaks_idx],
+            marker="x",
+            label=f"{i:3d}: {mag_field:.2f}T peaks",
+        )
         ax.legend(prop={"size": 6})
         plt.tight_layout()
         plt.savefig(f"{method}-{thres:.2f}.png")
@@ -138,7 +156,9 @@ def create_harmonics_dataframe(all_energies, harmonic_list=[1, 3, 5]):
         harmonics[harm_num] = np.array(harmonics[harm_num])[::-1]
 
     data = np.array([magn_field, *[x for x in harmonics.values()]]).T
-    df = pd.DataFrame(data, columns=["magn_field", *[f"harmonic{h}" for h in harmonics.keys()]])
+    df = pd.DataFrame(
+        data, columns=["magn_field", *[f"harmonic{h}" for h in harmonics.keys()]]
+    )
 
     return df
 

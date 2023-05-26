@@ -16,4 +16,4 @@ epu.energy.set(400)
 RE(bp.scan([after_v_slit], pgm.energy, 390, 410, 11))
 
 # Simulation '00000004':
-RE(bp.scan([after_v_slit], pgm.energy, 790, 810, epu.energy, 790-6, 810-6, num=11))
+RE(bp.scan([after_v_slit], pgm.energy, 790, 810, epu.energy, 790 - 6, 810 - 6, num=11))

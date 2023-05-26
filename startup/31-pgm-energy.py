@@ -55,7 +55,11 @@ def _get_cff(e_ph, grating, r2, r1, m, gratings):
     A1 = -0.5 * m * lambda_ * r2 * gratings[grating]["a1"]
     A0 = m * lambda_ * gratings[grating]["a0"]
     B2 = -4 + A0**2 - 4 * A1 + 4 * (A1 / A0) ** 2
-    B1 = -4 * (A1 / A0) * np.sqrt((1 + r2 / r1) ** 2 + 2 * A1 * (1 + r2 / r1) - A0**2 * (r2 / r1))
+    B1 = (
+        -4
+        * (A1 / A0)
+        * np.sqrt((1 + r2 / r1) ** 2 + 2 * A1 * (1 + r2 / r1) - A0**2 * (r2 / r1))
+    )
     B0 = 2 * A1 + 4 * (A1 / A0) ** 2 + (4 + 2 * A1 - A0**2) * (r2 / r1)
     cff = np.sqrt((B0 + B1) / B2)
 
@@ -124,10 +128,14 @@ def _get_pgm_angles(e_ph, grating, r2, r1, m, gratings, x_inc, x_diff, b, cff=No
     alpha = np.degrees(
         np.arcsin(
             -m * gratings[grating]["a0"] * lambda_ / (cff**2 - 1)
-            + np.sqrt(1 + (cff * m * gratings[grating]["a0"] * lambda_ / (cff**2 - 1)) ** 2)
+            + np.sqrt(
+                1 + (cff * m * gratings[grating]["a0"] * lambda_ / (cff**2 - 1)) ** 2
+            )
         )
     )
-    beta = np.degrees(np.arcsin(m * gratings[grating]["a0"] * lambda_ - np.sin(np.radians(alpha))))
+    beta = np.degrees(
+        np.arcsin(m * gratings[grating]["a0"] * lambda_ - np.sin(np.radians(alpha)))
+    )
     theta_m2 = abs(0.5 * (x_diff + x_inc + b * (180 - alpha + beta)))
     theta_gr = b * (90 + beta) + x_diff
 
@@ -190,17 +198,12 @@ def _get_pgm_energy(theta_m2, theta_gr, grating, m, gratings, x_inc, x_diff, b):
 
     beta = -90 + b * (theta_gr - x_diff)
     alpha = 180 + beta + b * (x_diff + x_inc - 2 * theta_m2)
-    lambda_ = (np.sin(np.radians(alpha)) + np.sin(np.radians(beta))) / (m * gratings[grating]["a0"])
+    lambda_ = (np.sin(np.radians(alpha)) + np.sin(np.radians(beta))) / (
+        m * gratings[grating]["a0"]
+    )
     e_ph = (12398.4197 / lambda_) * 1e-7  # energy in eV
 
     return e_ph
-
-
-# def _cff(e_ph, grating, r2, r1=_r1, m=_m, gratings=_gratings):
-
-
-# def _get_pgm_angles(e_ph, grating, r2, r1=_r1, m=_m, gratings=_gratings,
-#                x_inc=_x_inc, x_diff=_x_diff, b=_b):
 
 
 class CFFSignalRO(SirepoSignalWithParent):
@@ -208,8 +211,6 @@ class CFFSignalRO(SirepoSignalWithParent):
         super().__init__(*args, **kwargs)
 
     def get(self):
-
-    
         energy = self.parent.energy.get()
         grating = self.parent.grating_name.get()
         _r2 = self.parent._r2.get()
@@ -230,11 +231,15 @@ class CFFSignalRO(SirepoSignalWithParent):
 class PreMirrorAngleSignal(SirepoSignalWithParent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._value = np.degrees(self._readback * 1.0e-3) + 90.0  # _readback is in mrad, converting _value to deg.
+        self._value = (
+            np.degrees(self._readback * 1.0e-3) + 90.0
+        )  # _readback is in mrad, converting _value to deg.
         self._readback = self._value  # needs to be in deg too.
 
     def set(self, value):
-        super().set(np.radians(value - 90.0) * 1e3)  # updates Sirepo model, needs to be in mrad
+        super().set(
+            np.radians(value - 90.0) * 1e3
+        )  # updates Sirepo model, needs to be in mrad
         self._readback = float(value)  # in degrees.
         self._value = float(value)
         return NullStatus()
@@ -243,21 +248,18 @@ class PreMirrorAngleSignal(SirepoSignalWithParent):
 class GratingAngleSignal(SirepoSignalWithParent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._value = np.degrees(self._readback * 1.0e-3) + 90.0  # _readback is in mrad, converting _value to deg.
+        self._value = (
+            np.degrees(self._readback * 1.0e-3) + 90.0
+        )  # _readback is in mrad, converting _value to deg.
         self._readback = self._value  # needs to be in deg too.
 
     def set(self, value):
-        super().set(np.radians(value - 90.0) * 1e3)  # updates Sirepo model, needs to be in mrad.
+        super().set(
+            np.radians(value - 90.0) * 1e3
+        )  # updates Sirepo model, needs to be in mrad.
         self.parent.grating_angle._readback = float(value)  # in degrees.
         self._value = float(value)
         return NullStatus()
-
-
-# class GrooveDensitySignal(SirepoSignalWithParent):
-#     def set(self, value):
-#         super().set(value)
-#         # self.parent.grating_angle._readback = energy
-#         return NullStatus()
 
 
 class GratingNameSignal(Signal):
@@ -283,7 +285,6 @@ class GratingNameSignal(Signal):
             x_diff=_x_diff,
             b=_b,
         )
-        # print(f"{energy = }")
 
         for k, v in _gratings[value].items():
             # print(k, v)
@@ -299,10 +300,6 @@ class GratingNameSignal(Signal):
 
 
 class PGMEnergySignal(SignalWithParent):
-    # def __init__(self, value, *args, **kwargs) -> None:
-    #     super().__init__(*args, **kwargs)
-    #     self.put()
-
     def set(self, value):  # value is in eV.
         self._readback = float(value)
 
@@ -319,7 +316,6 @@ class PGMEnergySignal(SignalWithParent):
         _x_diff = self.parent._x_diff.get()
         _cff = self.parent.cff.get()
 
-        # e_ph, grating, r2, r1, m, gratings, x_inc, x_diff, b
         theta_pm, theta_gr = _get_pgm_angles(
             e_ph=value,
             grating=grating,
@@ -338,14 +334,6 @@ class PGMEnergySignal(SignalWithParent):
 
         return NullStatus()
 
-
-# # define the instantiation parameters here.
-# _m = 1
-# _r1 = 33350  # in mm: 33350 for ARI and 33000 for SXN
-# _r2 = 11500  # in mm: 11500 for ARI and 17500 for SXN
-# _x_inc = 90  # in degrees
-# _x_diff = 90  # in degrees
-# _b = 1  # bounce direction, 1 is up -1 is down
 
 _ari_gratings = {
     "LowE": {"a0": 50, "a1": 0.01868, "a2": 1.95e-06, "a3": 4e-9},
@@ -367,7 +355,11 @@ class PGM(Device):
 
     _gratings = Cpt(Signal, value=_ari_gratings)
 
-    energy = Cpt(PGMEnergySignal, value=connection.data["models"]["simulation"]["photonEnergy"], kind="hinted")
+    energy = Cpt(
+        PGMEnergySignal,
+        value=connection.data["models"]["simulation"]["photonEnergy"],
+        kind="hinted",
+    )
     grating_name = Cpt(GratingNameSignal, value="HighR")
     grated_harm_num = Cpt(Signal, value=1)
 
@@ -391,11 +383,18 @@ class PGM(Device):
         sirepo_param="grazingAngle",
     )
 
-    grating_output_focal_len = objects["v_slit"].element_position.get() - objects["grating"].element_position.get()  # in [m]
-    _r2 = Cpt(Signal, value= grating_output_focal_len * 1e3)  # input in [mm]; 43.6 m (vertical slit) - 32.1 m
+    grating_output_focal_len = (
+        objects["v_slit"].element_position.get()
+        - objects["grating"].element_position.get()
+    )  # in [m]
+    _r2 = Cpt(
+        Signal, value=grating_output_focal_len * 1e3
+    )  # input in [mm]; 43.6 m (vertical slit) - 32.1 m
 
     grating_input_focal_len = objects["grating"].element_position.get()  # in [m]
-    _r1 = Cpt(Signal, value=grating_input_focal_len * 1e3)  # input in [mm]; 32.1 m position for grating from Sirepo
+    _r1 = Cpt(
+        Signal, value=grating_input_focal_len * 1e3
+    )  # input in [mm]; 32.1 m position for grating from Sirepo
 
     _m = Cpt(Signal, value=1)  #  Diffraction Order in Sirepo
 
@@ -434,31 +433,6 @@ class PGM(Device):
         sirepo_dict=objects["grating"].grooveDensity3._sirepo_dict,
         sirepo_param="grooveDensity3",
     )
-
-    # We explicitly remove these components from the Sirepo class to avoid
-    # accidental change of them to avoid conflicts.
-
-    # def __init__(self, *args, harmonics_df=None, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     if harmonics_df is None:
-    #         raise ValueError(f"The 'harmonics' kwarg should be a pandas dataframe")
-    #     self._harmonics_df = harmonics_df
-    #     self._interp_kwargs = {"kind": "quadratic", "bounds_error": False, "fill_value": "extrapolate"}
-    #     self.energy.put(self._get_energy())
-
-    # def _get_energy(self):
-    #     magn_field = self.magn_field_ver.get()
-    #     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html
-    #     interp_func = interpolate.interp1d(self._harmonics_df["magn_field"],
-    #                                        self._harmonics_df[f"harmonic{self.harm_num.get()}"],
-    #                                        **self._interp_kwargs)
-    #     return float(interp_func(magn_field))
-
-    # def _get_magn_field(self, energy):
-    #     interp_func = interpolate.interp1d(self._harmonics_df[f"harmonic{self.harm_num.get()}"],
-    #                                        self._harmonics_df["magn_field"],
-    #                                        **self._interp_kwargs)
-    #     return float(interp_func(energy))
 
 
 pgm = PGM(name="pgm")
