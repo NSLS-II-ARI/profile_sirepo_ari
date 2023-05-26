@@ -51,7 +51,6 @@ jobs:
           conda env list
           # mamba install -c conda-forge -y numpy matplotlib ipython ophyd bluesky databroker sirepo-bluesky
           pip install numpy matplotlib ipython ophyd bluesky databroker sirepo-bluesky nslsii
-          mamba install -c conda-forge -y srwpy shadow3
 
           pip list
           conda list
