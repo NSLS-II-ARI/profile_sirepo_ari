@@ -103,7 +103,7 @@ class EPU(classes["undulator"]):
 
 df_harm = load_harmonics_json(path=HARMONICS_JSON)
 
-# Use interpolation interactively:
+# HINT: How to use interpolation interactively:
 # f = interpolate.interp1d(df_harm["magn_field"], df_harm["harmonic1"],
 #                          kind="quadratic", bounds_error=False, fill_value="extrapolate")
 # plt.plot(df_harm["magn_field"], df_harm["harmonic1"])

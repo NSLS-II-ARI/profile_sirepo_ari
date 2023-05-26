@@ -184,18 +184,6 @@ def _get_pgm_energy(theta_m2, theta_gr, grating, m, gratings, x_inc, x_diff, b):
         The photon energy of the PGM in eV.
     """
 
-    print(
-        f"""
-    {theta_m2 = }
-    {theta_gr = }
-    {grating = }
-    {m = }
-    {gratings = }
-    {x_inc = }
-    {x_diff = }
-    {b = }"""
-    )
-
     beta = -90 + b * (theta_gr - x_diff)
     alpha = 180 + beta + b * (x_diff + x_inc - 2 * theta_m2)
     lambda_ = (np.sin(np.radians(alpha)) + np.sin(np.radians(beta))) / (
@@ -267,8 +255,6 @@ class GratingNameSignal(Signal):
     def put(self, value):
         super().put(value)
 
-        # _r2 = self.parent._r2.get()
-        # _r1 = self.parent._r1.get()
         _m = self.parent._m.get()
         _b = self.parent._b.get()
         _x_inc = self.parent._x_inc.get()
@@ -287,7 +273,6 @@ class GratingNameSignal(Signal):
         )
 
         for k, v in _gratings[value].items():
-            # print(k, v)
             getattr(self.parent, f"_{k}").put(v)
 
         self.parent.energy._readback = energy
@@ -440,7 +425,6 @@ pgm.grating_name.set("HighR")
 
 pgm.energy.set(connection.data["models"]["simulation"]["photonEnergy"])
 pgm.kind = "hinted"
-# pgm.energy.kind = "hinted"
 
 after_v_slit.kind = "hinted"
 after_v_slit.mean.kind = "hinted"
