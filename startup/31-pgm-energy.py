@@ -1,3 +1,5 @@
+print(f"{datetime.datetime.now().isoformat()} Loading {__file__}...")
+
 import numpy as np
 from ophyd import Component as Cpt
 from ophyd import Device, Signal, SignalRO

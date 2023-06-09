@@ -1,3 +1,5 @@
+print(f"{datetime.datetime.now().isoformat()} Loading {__file__}...")
+
 import matplotlib.pyplot as plt
 
 

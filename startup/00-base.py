@@ -1,5 +1,7 @@
 import datetime
 
+print(f"{datetime.datetime.now().isoformat()} Loading {__file__}...")
+
 import databroker
 import matplotlib.pyplot as plt
 import nslsii

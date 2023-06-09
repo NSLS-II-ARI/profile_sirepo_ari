@@ -1,3 +1,5 @@
+print(f"{datetime.datetime.now().isoformat()} Loading {__file__}...")
+
 import bluesky.plan_stubs as bps
 import bluesky.plans as bp
 
