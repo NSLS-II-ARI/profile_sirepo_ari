@@ -1,3 +1,5 @@
+print(f"{datetime.datetime.now().isoformat()} Loading {__file__}...")
+
 import matplotlib.pyplot as plt
 
 
@@ -19,6 +21,6 @@ def plot_images(data, nrows=2, ncols=4):
         print(f"{row = }")
         for col in range(ncols):
             print(f"  {col = } --> {ax[row][col]}")
-            ax[row][col].imshow(data[row * ncols + col],
-                                vmin=data.min(),
-                                vmax=data.max())
+            ax[row][col].imshow(
+                data[row * ncols + col], vmin=data.min(), vmax=data.max()
+            )

@@ -1,6 +1,9 @@
 import datetime
-import matplotlib.pyplot as plt
+
+print(f"{datetime.datetime.now().isoformat()} Loading {__file__}...")
+
 import databroker
+import matplotlib.pyplot as plt
 import nslsii
 from ophyd.utils import make_dir_tree
 from sirepo_bluesky.shadow_handler import ShadowFileHandler
@@ -13,11 +16,11 @@ try:
 except Exception:
     pass
 
-db.reg.register_handler('srw', SRWFileHandler, overwrite=True)
-db.reg.register_handler('shadow', ShadowFileHandler, overwrite=True)
-db.reg.register_handler('SIREPO_FLYER', SRWFileHandler, overwrite=True)
+db.reg.register_handler("srw", SRWFileHandler, overwrite=True)
+db.reg.register_handler("shadow", ShadowFileHandler, overwrite=True)
+db.reg.register_handler("SIREPO_FLYER", SRWFileHandler, overwrite=True)
 
 plt.ion()
 
-root_dir = '/tmp/sirepo-bluesky-data'
+root_dir = "/tmp/sirepo-bluesky-data"
 _ = make_dir_tree(datetime.datetime.now().year, base_path=root_dir)

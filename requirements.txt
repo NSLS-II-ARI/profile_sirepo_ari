@@ -1,0 +1,3 @@
+ipython
+nslsii
+sirepo-bluesky

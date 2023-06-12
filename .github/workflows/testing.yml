@@ -1,0 +1,99 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  run_tests:
+    # pull requests are a duplicate of a branch push if within the same repo.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+
+    name: Test IPython startup files
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10"]
+      fail-fast: false
+    env:
+      TZ: America/New_York
+
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Set env vars
+        run: |
+          export REPOSITORY_NAME=${GITHUB_REPOSITORY#*/}  # just the repo, as opposed to org/repo
+          echo "REPOSITORY_NAME=${REPOSITORY_NAME}" >> $GITHUB_ENV
+
+          export USE_SIREPO=1
+          echo "USE_SIREPO=${USE_SIREPO}" >> $GITHUB_ENV
+
+      - name: Checkout the code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }} with conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: ${{ env.REPOSITORY_NAME }}-py${{ matrix.python-version }}
+          auto-update-conda: true
+          miniconda-version: "latest"
+          python-version: ${{ matrix.python-version }}
+          mamba-version: "*"
+          channels: conda-forge
+
+      - name: Install the package and its dependencies
+        run: |
+          set -vxeo pipefail
+          conda env list
+          # mamba install -c conda-forge -y numpy matplotlib ipython ophyd bluesky databroker sirepo-bluesky
+          pip install numpy matplotlib ipython ophyd bluesky databroker sirepo-bluesky nslsii
+
+          pip list
+          conda list
+
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.6.0
+
+      - name: Start Sirepo Docker container
+        uses: NSLS-II/start-sirepo-action@v2
+        with:
+          docker-binary: docker
+
+      - name: Prepare databroker config
+        run: |
+          set -vxeuo pipefail
+          mkdir -v -p $HOME/.config/databroker/
+          cp -v configs/databroker/local.yml $HOME/.config/databroker/
+
+      - name: Test the code
+        run: |
+          set -vxeuo pipefail
+          # This is what IPython does internally to load the startup files:
+          command="
+          import os
+          import glob
+          ip = get_ipython()
+          startup_files = sorted(glob.glob(os.path.join(os.getcwd(), 'startup/*.py')))
+          if os.path.isfile('.ci/drop-in.py'):
+              startup_files.append('.ci/drop-in.py')
+          if not startup_files:
+              raise SystemExit(f'Cannot find any startup files in {os.getcwd()}')
+          for f in startup_files:
+              if not os.path.isfile(f):
+                  raise FileNotFoundError(f'File {f} cannot be found.')
+              print(f'Executing {f} in CI')
+              ip.parent._exec_file(f)"
+
+          ipython --profile=test -c "$command"
+
+      - name: Check Sirepo server logs
+        if: always()
+        run: |
+          set -vxeuo pipefail
+          docker ps -a
+          echo "Sirepo docker container id: ${SIREPO_DOCKER_CONTAINER_ID}"
+          docker logs ${SIREPO_DOCKER_CONTAINER_ID}

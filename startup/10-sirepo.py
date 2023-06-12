@@ -1,3 +1,5 @@
+print(f"{datetime.datetime.now().isoformat()} Loading {__file__}...")
+
 import os
 import warnings
 
@@ -10,7 +12,6 @@ else:
     USE_SIREPO = False
 
 if USE_SIREPO:
-
     # Assumption: there is a running local instance of Sirepo. Please follow the
     # instructions at https://nsls-ii.github.io/sirepo-bluesky/installation.html to
     # install/configure Sirepo and Sirepo-Bluesky.
@@ -18,10 +19,12 @@ if USE_SIREPO:
 
     # See https://nsls-ii.github.io/sirepo-bluesky/simulations.html for the list of
     # simulations.
-    data, schema = connection.auth("srw", "00000003")
-    classes, objects = create_classes(connection.data,
-                                      connection=connection,
-                                      extra_model_fields=['undulator', 'intensityReport'])
+    data, schema = connection.auth("srw", "00000004")
+    classes, objects = create_classes(
+        connection.data,
+        connection=connection,
+        extra_model_fields=["undulator", "intensityReport"],
+    )
     globals().update(**objects)
 
     # In [234]: classes
