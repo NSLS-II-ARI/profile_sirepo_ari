@@ -5,14 +5,14 @@
 Prepare the environment by following the instructions at
 https://nsls-ii.github.io/sirepo-bluesky/installation.html.
 
-We are using simulation with sim_id=`00000003`. See
+We are using simulation with sim_id=`00000004`. See
 https://nsls-ii.github.io/sirepo-bluesky/simulations.html for more details.
 
 ```bash
 $ conda activate <conda-env>  # with sirepo-bluesky, bluesky, ophyd, databroker, etc.
-$ pip install nslsii openpyxl  # additional packages, not listed in the requirements.
+$ pip install -r requirements.txt  # additional packages, not listed in the requirements.
 $ git clone https://github.com/NSLS-II-ARI/profile_sirepo_ari && cd profile_sirepo_ari/
-$ ipython --profile-dir=.
+$ USE_SIREPO=yes ipython --profile-dir=.
 ```
 
 ## Run a scan

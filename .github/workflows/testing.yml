@@ -29,7 +29,7 @@ jobs:
           export REPOSITORY_NAME=${GITHUB_REPOSITORY#*/}  # just the repo, as opposed to org/repo
           echo "REPOSITORY_NAME=${REPOSITORY_NAME}" >> $GITHUB_ENV
 
-          export USE_SIREPO=1
+          export USE_SIREPO=yes
           echo "USE_SIREPO=${USE_SIREPO}" >> $GITHUB_ENV
 
       - name: Checkout the code
@@ -50,7 +50,7 @@ jobs:
           set -vxeo pipefail
           conda env list
           # mamba install -c conda-forge -y numpy matplotlib ipython ophyd bluesky databroker sirepo-bluesky
-          pip install numpy matplotlib ipython ophyd bluesky databroker sirepo-bluesky nslsii
+          pip install -r requirements.txt
 
           pip list
           conda list
