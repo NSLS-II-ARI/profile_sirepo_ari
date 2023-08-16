@@ -21,7 +21,6 @@ if USE_SIREPO:
     # simulations.
     data, schema = connection.auth("srw", "00000004")
     classes, objects = create_classes(
-        connection.data,
         connection=connection,
         extra_model_fields=["undulator", "intensityReport"],
     )

@@ -1,3 +1,8 @@
+bluesky
+databroker
 ipython
+matplotlib
 nslsii
-sirepo-bluesky
+numpy
+ophyd
+sirepo-bluesky>=0.7.0
